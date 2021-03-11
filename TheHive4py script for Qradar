@@ -73,9 +73,9 @@ def OffensesRequest(ClientName,ClientIP,OffenseTypeURL,ClientApi,headers,DomainU
     data = response_1.json()
     last_id = str(data[0]['id'])
     #print(last_id)
-    last_line=int(last_id)-40
+    last_line=int(last_id)-1
     if int(df)==0:
-        last_line = int(last_id)-40
+        last_line = int(last_id)-1
         sheet1.write(int(j),4,last_id)
         wb.save('/home/qradar/CustomerList.xls')
         print("File was empty. To avoid errors, the file has been updated with the ID of the penultimate QRadar offense: "+ str(last_line))
@@ -229,9 +229,8 @@ rb = xlrd.open_workbook(loc)
 sheet = rb.sheet_by_index(0)
 wb=copy(rb)
 sheet1 = wb.get_sheet(0)
-#for j in range(1,sheet.nrows):
 
-for j in range(20,22):
+for j in range(1,sheet.nrows):
 
         ClientName=sheet.cell_value(j,0)
         ClientIP =sheet.cell_value(j, 1)
