@@ -9,3 +9,5 @@ The initial intended use is to create a list of all incoming Offenses for Analys
 Phase one of TheHive is a management tool for tracking Offenses, monitoring time on task,response time, filtering and sorting, and assignees. 
 Phase two will move towards updating status in qradar, updating severity, etc in qradar from theHive so that analysts can complete and document their work all in TheHive.
 Phase three will be to integrate Cortex into the Playbook so that repetitive tasks can become more efficiently addressed.
+
+The lateste version uses a csv. has to have at least one line itn it to start and the fields need the The last_offgense and NewOpen populated with "#0" and a datetime in the last_process date of the form mm/dd/yyyy hh:mm:ss:ms. 
