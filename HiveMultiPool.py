@@ -27,7 +27,7 @@ from thehive4py.models import Case, CustomFieldHelper, CaseTask, CaseObservable
 #except requests.exceptions.RequestException:
           # sys.exit(1)
 
-api = TheHiveApi('http://10.241.93.116:9000','iU+saEmOI4vo1KFsyzljo/FwAt+tllme')
+api = TheHiveApi('IP','Token')
 warnings.filterwarnings('ignore')
 
 
