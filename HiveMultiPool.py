@@ -10,30 +10,27 @@ import flask
 import time
 import uuid 
 import sys
-import time
 import re
 import xlutils
 import timeit
 import os
 import pandas as pd
+import datetime
+import pytz.reference 
 from  multiprocessing import Pool, Process ,current_process,get_context
 
 from thehive4py.api import TheHiveApi
 from thehive4py.models import Case, CustomFieldHelper, CaseTask, CaseObservable
 
-#except requests.exceptions.RequestException as e:
-           # sys.exit("Error: {}".format(e))
-
-#except requests.exceptions.RequestException:
-          # sys.exit(1)
-
-api = TheHiveApi('TheHive IP','Token Key')
+api = TheHiveApi('http://****','API  Key')
 warnings.filterwarnings('ignore')
 
 
    
-def DomainName(ClientIP,headers,did):
+def DomainName(ClientIP,did):
     DomainURL= str(ClientIP+'api/config/domain_management/domains?fields=id%2Cname').strip()
+    headers = {'accept': 'application/json', 'SEC':str(ClientApi),'range':'items=0-100'}
+
     response_4 = requests.get(DomainURL,headers=headers,verify=False)
     
     if (response_4.status_code)==200:
@@ -41,7 +38,10 @@ def DomainName(ClientIP,headers,did):
         
         for l in domdata:
           if int(l['id'])==int(did):
-           return(l['name'])
+
+
+             Print("Domain Id:",did," Client from MTU:", l['name'])
+             return(l['name'])
        
     else:
        return(ClientName) 
@@ -51,6 +51,8 @@ def DomainName(ClientIP,headers,did):
 
 def OffenseType(ClientIP,headers,offense_type):
     OffenseTypeURL=str(ClientIP+'api/siem/offense_types').strip()
+    headers = {'accept': 'application/json', 'SEC':str(ClientApi),'range':'items=0-100'}
+
     response_5 = requests.get(OffenseTypeURL,headers=headers,verify=False)
 
 
@@ -70,9 +72,9 @@ def OffenseType(ClientIP,headers,offense_type):
 
 def OffensesRequest(ClientName,ClientIP,ClientApi,lof,j):
           #df=pd.read_csv('Client.csv',usecols=col,dtype={'Client_Name':str,'Link_for_Console':str,'Token':str,'Status':str,'Last_offense':str,'NewOpen':str,'Process_time':str,'error_msg':str,'Last_Process_Date':str},index_col=False)
-          headers = {'accept': 'application/json', 'SEC':str(ClientApi), 'Version': '12.1','range':'items=0-49'}
+          headers = {'accept': 'application/json', 'SEC':str(ClientApi),'range':'items=0-5'}
           #print(headers)
-          url=str(str(ClientIP)+'api/siem/offenses?fields=id%2Cstatus%2Cdescription%2Coffense_type%2Coffense_source%2Cmagnitude%2Csource_network%2Cdestination_networks%2Cassigned_to%2Cstart_time%2Cevent_count%2Cdomain_id%2Cfollow_up%2Ccategories%2Cseverity')
+          url=str(str(ClientIP)+'api/siem/offenses?fields=id%2Cstatus%2Cdescription%2Coffense_type%2Coffense_source%2Cmagnitude%2Csource_network%2Cdestination_networks%2Cassigned_to%2Cstart_time%2Cevent_count%2Cdomain_id%2Cfollow_up%2Ccategories%2Cseverity%2Cinactive')
           #print(url) 
 
 
@@ -86,73 +88,75 @@ def OffensesRequest(ClientName,ClientIP,ClientApi,lof,j):
           print(ClientName, "RESPONSE 1 CODE: ",response_1.status_code)
 
           
-          if (response_1.status_code) == 200:
-                
+          if (response_1.status_code) == 200 or response_1.status_code== 206:
+               
                     data = response_1.json()
-                    #print(data)
                     last_id = str(data[0]['id'])
-                    print(ClientName,last_id,lof)
+                    print(ClientName,"last id from qradar:",last_id,"last recorded id:",lof)
                     rangecheck = int(last_id)-int(lof)
 
-                    if rangecheck>=49:
-                        headers = {'accept': 'application/json', 'SEC':str(ClientApi), 'Version': '12.1','range':str('items=0-'+str(rangecheck))}
+                    if rangecheck>=5 and int(lof)!=0:
+                        headers = {'accept': 'application/json', 'SEC':str(ClientApi), 'Version': '12.0','range':str('items=0-'+str(rangecheck))}
                         response_1 = session.get(url,headers=headers,verify=False)
                         data = response_1.json()
                         last_id = str(data[0]['id'])
+                        print("rangecheck true, range:", rangecheck)
                    
-
+                  
     
 
-                    last_line = int(last_id)-1
-
+                    
+                    print('*******LOF=',lof)
                     if lof=='0'or int(lof)==0 or lof=='#0':
-                                last_line = int(last_id)-5
-                                print(ClientName+", "+"File was empty. To avoid errors, the file has been updated with the ID of the penultimate QRadar offense: "+ str(last_id))
-                    elif int(last_id)!=int(lof):
-                                last_line = int(lof)
+                        print("lof =0")
+                        last_line = int(last_id)-1
+                        col=[0,1,2,3,4,5,6,7,8]                
+                        df=pd.read_csv('/home/qradar/Client.csv',usecols=col)
+                        df.iat[int(j),4]=str('#'+str(last_id))
+                        df.to_csv('/home/qradar/Client.csv',index=False)
+                     
+                        print(ClientName+", "+"File was empty. To avoid errors, the file has been updated with the ID of the penultimate QRadar offense: "+ str(last_line))
+                    #elif int(last_id)>int(lof):
+                                #last_line = int(lof)
                     elif int(last_id)==int(lof):
                                  print("no new offense for: ",ClientName)
                                  return("NoNew",response_1.status_code)
-                           
+                    else:
+                        last_line=int(lof)
+                        col=[0,1,2,3,4,5,6,7,8]                
+                        df=pd.read_csv('/home/qradar/Client.csv',usecols=col)
+                        df.iat[int(j),4]=str('#'+str(last_id))
+                        df.to_csv('/home/qradar/Client.csv',index=False)
+                                       
                     first_new_offense = int(last_line)
-                    diff = int(last_id) - first_new_offense
-                    col=[0,1,2,3,4,5,6,7,8]                
-                    df=pd.read_csv('Client.csv',usecols=col)
-                    df.iat[int(j),4]=str('#'+str(last_id))
-                    df.iat[int(j),5]=str('#'+str(diff))
-                    df.to_csv('Client.csv',index=False)
-                    
+                    diff = (int(last_id) - first_new_offense)
+                   
                     #print("This is where lastline is compared to last_id",last_line,"  ",last_id)
-                    if int(last_line) < int(last_id):
-                                print("Client : ", ClientName,"lastID: ",last_id,"last_line: ",last_line,"diff :",diff,"ClientName: ",ClientName)
+                    if diff>=0:
+                                print("Diff: ",diff, "Client : ", ClientName,"lastID: ",last_id,"last_line: ",last_line,"diff :",diff)
                                 col=[0,1,2,3,4,5,6,7,8]                
-                                df=pd.read_csv('Client.csv',usecols=col)
-
-                                df.iat[int(j),4]=str('#'+str(last_id))
+                                df=pd.read_csv('/home/qradar/Client.csv',usecols=col)
                                 df.iat[int(j),5]=str('#'+str(diff))
-                                df.to_csv('Client.csv',index=False)
-
-
-
-
-
-                                for k in range(0,diff):
-                                            i=diff-k
+                                df.to_csv('/home/qradar/Client.csv',index=False)
+                         
+                                for i in range(0,diff):
+                                       
+                                       status=str(data[i]['status'])
+                                       inactive=str(data[i]['inactive'])
+                                       if status=='OPEN' or status=='HIDDEN':
                                             print(ClientName,": i=",i)
                                             if str(data[i]['domain_id'])=='0':
                                                customer = ClientName
                                             else:
-                                               customer = DomainName(ClientIP,headers,str(data[i]['domain_id']))
+                                               customer = DomainName(ClientIP,str(data[i]['domain_id']))
                                             if customer =='staging' or customer =='Staging':
                                                continue
                                             offenseDescription = str(data[i]['description'])
                                             offenseid = (str(data[i]['id']))
                                             #("offenseID: ",offenseid,"customer: ",customer)
-                                            offensetype=OffenseType(ClientIP,headers,str(data[i]['offense_type']))
+                                            offensetype=OffenseType(ClientIP,str(data[i]['offense_type']))
 
-                                            status=str(data[i]['status'])
-                                            if status =='CLOSED':
-                                               continue                                 
+                                                                           
                                            
                                             offenseMagnitude = (str(data[i]['magnitude']))
                                             categories=str(data[i]['categories'])
@@ -195,27 +199,33 @@ def OffensesRequest(ClientName,ClientIP,ClientApi,lof,j):
                                                     .add_date('starttime',int(starttime))\
                                                     .add_string('linktoqradar',LinkToQradar)\
                                                     .add_string('customer',customer)\
+                                                    .add_string('inactive',inactive)\
                                                     .build()
 
                                             if int(offenseMagnitude) < 5:
                                                     tlp = '1'
                                             elif int(offenseMagnitude)>4 and int(offenseMagnitude)<8:
                                                     tlp = '2'
-                                            elif int(offenseMagnitude)>7:
+                                            elif int(offenseMagnitude)>7 and int(offenseMagnitude)<10:
                                                     tlp= '3'
+                                            elif int(offenseMagnitude)==10:
+                                                    tlp='4'
                                             else:
                                                     tlp='2'
 
-                                            if int(offenseMagnitude) < 3:
+                                            if int(offenseMagnitude) < 5:
                                                     sev = '1'
-                                            elif int(offenseMagnitude)>2 and int(offenseMagnitude)<5:
-                                                    sev = '2'
                                             elif int(offenseMagnitude)>4 and int(offenseMagnitude)<8:
+                                                    sev = '2'
+                                            elif int(offenseMagnitude)>7 and int(offenseMagnitude)<10:
                                                     sev = '3'
-                                            elif int(offenseMagnitude)>7:
+                                            elif int(offenseMagnitude)==10:
                                                     sev = '4'
                                             else:
                                                     sev = '2'
+                                            customer_tag = str("Client: "+ customer)
+                                            magnitude_tag = str("Mag: "+str(offenseMagnitude))
+                                            offense_type_tag =str("Off_Type: "+ str(offensetype))
                                           
 
                                             case = Case(title=offenseDescription, id=offenseid,
@@ -223,7 +233,7 @@ def OffensesRequest(ClientName,ClientIP,ClientApi,lof,j):
                                                     severity = int(sev),
                                                     flag=bool(followUp),
                                                     metrics=["offenseeventcount",int(offenseEventCount)],
-                                                    tags=[customer, offensetype,str(offenseMagnitude)],
+                                                    tags=[customer_tag ,magnitude_tag,offense_type_tag],
                                                     description=LinkToQradar,
                                                     tasks=tasks,
                                                                
@@ -240,8 +250,9 @@ def OffensesRequest(ClientName,ClientIP,ClientApi,lof,j):
                                                     print('ko: {}/{}'.format(response_2.status_code, response_2.text))
                                                     col=[0,1,2,3,4,5,6,7,8]                
                                                     df=pd.read_csv('Client.csv',usecols=col)
-                                                    df.iat[j,7] =response_2.status_code
+                                                    df.iat[j,7] =str("Case Error: "+ str(response_2.status_code))
                                                     df.to_csv('Client.csv',index=False)
+                                                    del df
                                                     continue
                                                     #sys.exit(0)
                                                
@@ -266,8 +277,13 @@ def OffensesRequest(ClientName,ClientIP,ClientApi,lof,j):
                                                     #print('ko: {}/{}'.format(response_3.status_code, response_3.text))
                                                     #sys.exit(0)
    
-                                               
-                    return('True',response_1.status_code)
+                                       else:
+                                           continue                 
+                                return('True',response_1.status_code)
+
+                    else:
+                                return("NoNew",response_1.status_code)
+
           else:
                     print("Can't get offenses, check the configuration.")   
                     return('False',response_1.status_code)
@@ -277,7 +293,7 @@ def OffensesRequest(ClientName,ClientIP,ClientApi,lof,j):
 def client_process(j):
    
       col=[0,1,2,3,4,5,6,7,8] 
-      df=pd.read_csv('Client.csv',usecols=col,index_col=False)
+      df=pd.read_csv('/home/qradar/Client.csv',usecols=col,index_col=False)
       process_id = current_process().name
       print(f"pocess ID: {process_id}")
       ClientName=df.values[j][0]
@@ -288,35 +304,47 @@ def client_process(j):
       ClientApi=ClientApi.strip()
       lofs= df['Last_offense'].str.split('#').str[1]
 
-      lof=lofs.values[j]
-      print(lof)
+      lof=int(lofs.values[j])
+      #print(lof)
       starttime1=time.process_time()
       df.iat[j,8]=str(pd.to_datetime(time.time(), unit='s'))
-      df.to_csv('Client.csv',index=False)
+      df.to_csv('/home/qradar/Client.csv',index=False)
+      del df
+      
+    
     
         			
       warnings.filterwarnings('ignore')
 				
-      print("sent to Request:",ClientName,ClientIP,ClientApi,lof,j)
+      #print("sent to Request:",ClientName,ClientIP,ClientApi,lof,j)
       
       try:
             success,response = OffensesRequest(ClientName,ClientIP,ClientApi,lof,j)
 
       except Exception as e:
-            print(str(pd.to_datetime(time.time(), unit='s'))+"  "+ClientName+" Error: "+ str(e))
-      finally:
-           pass
-      success,response = OffensesRequest(ClientName,ClientIP,ClientApi,lof,j)
+            trace_back = sys.exc_info()[2]
+            line = trace_back.tb_lineno
+            p= ("Process Exception in line {}".format(line), e)
+          
+            print(str(p))
+            logf = open('Hive.log','w')
+            logf.write(str(p))
+            logf.close()
+            return()
+
+      #success,response = OffensesRequest(ClientName,ClientIP,ClientApi,lof,j)
       print(success,response) 
       if success=='True':
          stoptime1=time.process_time()
          client_time =stoptime1-starttime1
          print(ClientName,'Success',client_time)
          col=[0,1,2,3,4,5,6,7,8] 
-         df=pd.read_csv('Client.csv',usecols=col,index_col=False)
+         df=pd.read_csv('/home/qradar/Client.csv',usecols=col,index_col=False)
          df.iat[j,3]='Success'
          df.iat[j,6] = str(client_time)
-         df.to_csv('Client.csv',index=False)
+         df.to_csv('/home/qradar/Client.csv',index=False)
+         del df
+         return()
       elif success=='False':
          stoptime1=time.process_time()
          client_time =stoptime1-starttime1
@@ -326,73 +354,123 @@ def client_process(j):
          df.iat[j,3]='Fail'
          df.iat[j,7]=response
          df.iat[j,6]=str(client_time)
-         df.to_csv('Client.csv',index=False)
+         df.to_csv('/home/qradar/Client.csv',index=False)
+         del df
+         return()
       elif  success=='NoNew':
          stoptime1=time.process_time()
          client_time =stoptime1-starttime1
          print(ClientName,'NoNew',client_time)
          col=[0,1,2,3,4,5,6,7,8] 
-         df=pd.read_csv('Client.csv',usecols=col,index_col=False)
+         df=pd.read_csv('/home/qradar/Client.csv',usecols=col,index_col=False)
          df.iat[j,3]='NoNew'
          df.iat[int(j),5]=str('#'+'0')
          df.iat[j,6]=str(client_time)
-         df.to_csv('Client.csv',index=False)
-      return()
+         df.to_csv('/home/qradar/Client.csv',index=False)
+         del df
+         return()
+    
 
 def method_process():
-
+    print("method: Multi Process")
     col=[0,1,2,3,4,5,6,7,8] 
-    df=pd.read_csv('Client.csv',usecols=col,index_col=False)
+    df=pd.read_csv('/home/qradar/Client.csv',usecols=col,index_col=False)
+    pend=(df[df['Client_Name']=='eof'].index.values)
+
     processes = []
-    r = range(0,len(df))
+    r = range(0,int(pend))
     numbers=[*r]
     for j in numbers:
-             
-             #result=client_process(j)
-             process = Process(target=client_process,args = (j,))
-             processes.append(process)
-             process.start()
+        if df.values[j][0]!='eof':
+           process = Process(target=client_process,args = (j,))
+           processes.append(process)
+           process.start()
+       
     for process in processes:
-             process.join()
-             process.close
+           process.join()
+           process.close
     return()
 
-def method_pool():	
+def method_pool():
+    print("method:Pool")	
     col=[0,1,2,3,4,5,6,7,8] 
-    df=pd.read_csv('Client.csv',usecols=col,index_col=False)
-    r = range(0,len(df))
+    df=pd.read_csv('/home/qradar/Client.csv',usecols=col,index_col=False)
+    pend=(df[df['Client_Name']=='eof'].index.values)
+
+    r = range(0,int(pend))
     numbers=[*r]
     with get_context("spawn").Pool() as p:
-      #p=Pool()
-       result=p.map(client_process,numbers)
-       p.close()
-       p.join()
+          #p=Pool()
+          result=p.map(client_process,numbers)
+          p.close()
+          p.join()
+    
     return()
    
 
 def method_no_multi():
+    print("Method: No-MultiProcess")
     col=[0,1,2,3,4,5,6,7,8] 
-    df=pd.read_csv('Client.csv',usecols=col,index_col=False)                                                                                                         
-    r = range(0,len(df))
+    df=pd.read_csv('/home/qradar/Client.csv',usecols=col,index_col=False)                                                                                                         
+    pend=(df[df['Client_Name']=='eof'].index.values)
+
+    r = range(0,int(pend))
     numbers=[*r]
     for j in numbers:
-             
-             result=client_process(j)
-    return()  
+         if df.values[j][0]!='eof':
+           result=client_process(j)
+         else: 
+           return()  
+
+def clean_csv():
+    col=[0,1,2,3,4,5,6,7,8] 
+    df=pd.read_csv('/home/qradar/Client.csv',usecols=col,index_col=False)                                                                                                         
+    
+    r = range(1,len(df))
+    numbers=[*r]
+    df2={'Client_Name':'eof'}
+    for j in numbers:
+         if df.values[j][0]=='eof':
+             if j == len(df):
+               df.drop(j,axis=0,inplace=True)
+               df=df.append(df2,ignore_index=True)
+               
+               df.to_csv('/home/qradar/Client.csv',index=False)
+           
+             elif j< len(df):
+               diff=len(df)-j
+               for i in range(diff,0,-1):
+                   k=j+i
+                   print(k)
+                   print(df.iloc[[k-1]])
+                   df.drop(k-1,axis=0,inplace=True)
+               df=df.append(df2,ignore_index=True)               
+               df.to_csv('/home/qradar/Client.csv',index=False)
+               break
+
+         else:
+             continue
+
+    return() 
+ 
+
+
 			   
             
 if __name__ == '__main__': 
     #SELECT WHICH PROCESS YOU WANT TO RUN BY REMOVING THE '#' IN FRONT OF IT.mAKE SUR THE OTHER TWO HAVE A '#'.   
     tmain_start=time.perf_counter()
-    #logf = open('Hive.log','w')
+    clean_csv()
 
-    #method_no_multi()
-    method_pool()
+    method_no_multi()
+    #method_pool()
     #method_process()
+            
 
     tmain_stop=time.perf_counter()
-    #logf.close 
+    print(str(pd.to_datetime(time.time(), unit='s'))) 
     print("The time difference is :", tmain_stop-tmain_start)       
     #df.iat[0,6]=timeit.default_timer() - starttime
-    #df.to_csv('Client.csv',index=False)
+    #df.to_csv('/home/qradar/Client.csv',index=False)
     
+
