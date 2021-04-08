@@ -11,3 +11,5 @@ Phase two will move towards updating status in qradar, updating severity, etc in
 Phase three will be to integrate Cortex into the Playbook so that repetitive tasks can become more efficiently addressed.
 
 The lateste version uses a csv. has to have at least one line itn it to start and the fields need the The last_offgense and NewOpen populated with "#0" and a datetime in the last_process date of the form mm/dd/yyyy hh:mm:ss:ms. 
+
+Update 04-08-2021: I have made several iterative cahnges and be;ieve the lastest version to be the most accurate and stable, yet. Going to production with this one.
